@@ -17,4 +17,23 @@ namespace ReplaceBackground.Infrastructure.Commands
                 _execute(parameter);
         }
     }
+
+    class LambdaCommand<T>([NotNull] Action<T> execute, Func<T, bool>? canExecute = null) : Command
+    {
+        private readonly Action<T> _execute = execute;
+        private readonly Func<T, bool>? _canExecute = canExecute;
+
+        protected override bool CanExecute(object? parameter)
+        {
+            if(parameter is T val)
+                return _canExecute?.Invoke(val) ?? true;
+            return false;
+        }
+
+        protected override void Execute(object? parameter)
+        {
+            if(parameter is T val && CanExecute(parameter))
+                _execute(val);
+        }
+    }
 }
