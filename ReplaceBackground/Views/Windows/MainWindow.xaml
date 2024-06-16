@@ -6,12 +6,43 @@
         xmlns:local="clr-namespace:ReplaceBackground"
         
         xmlns:vm="clr-namespace:ReplaceBackground.ViewModels"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         
-        Title="ReplaceBackground" Height="450" Width="800">
+        ResizeMode="CanMinimize"
+        Title="ReplaceBackground" Height="150" Width="300">
     <Window.DataContext>
         <vm:MainWViewModel/>
     </Window.DataContext>
-    <Grid>
-        
-    </Grid>
+    <i:Interaction.Triggers>
+        <i:EventTrigger EventName="Loaded">
+            <i:InvokeCommandAction Command="{Binding LoadedWindowCommand}"
+                                   CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=local:MainWindow}}"
+                                   />
+        </i:EventTrigger>
+        <i:EventTrigger EventName="Closed">
+            <i:InvokeCommandAction Command="{Binding ClosedWindowCommand}"/>
+        </i:EventTrigger>
+    </i:Interaction.Triggers>
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top">
+            <DockPanel.Resources>
+                <Style TargetType="StackPanel">
+                    <Setter Property="VerticalAlignment" Value="Center"/>
+                    <Setter Property="Orientation" Value="Horizontal"/>
+                    <Setter Property="Margin" Value="10,5"/>
+                </Style>
+            </DockPanel.Resources>
+            <StackPanel DockPanel.Dock="Left" HorizontalAlignment="Left">
+                <TextBlock Text="Autorun " VerticalAlignment="Center"/>
+                <CheckBox IsChecked="{Binding IsAutorun}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <TextBlock Text="Интервал замены: " VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding Intervals}" SelectedItem="{Binding SelectedInterval}"/>
+            </StackPanel>
+        </DockPanel>
+        <Button Margin="10" Padding="20,10">
+            <TextBlock TextAlignment="Center">Открыть папку <LineBreak/> с изображениями</TextBlock>
+        </Button>
+    </DockPanel>
 </Window>
