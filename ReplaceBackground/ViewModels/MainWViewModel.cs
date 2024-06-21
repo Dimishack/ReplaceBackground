@@ -20,7 +20,6 @@ namespace ReplaceBackground.ViewModels
 
         const string PROGRAMNAME = "ReplaceBackground";
         private readonly DateTime DATETODAY = DateTime.Today;
-        private Window? _currentWindow;
         private string _directory = Environment.CurrentDirectory;
         private readonly JsonSerializerOptions _JSO = new()
         {
@@ -53,7 +52,7 @@ namespace ReplaceBackground.ViewModels
                         if (value ^ Array.IndexOf(rk.GetValueNames(), PROGRAMNAME) != -1)
                         {
                             if (value)
-                                rk.SetValue(PROGRAMNAME, Environment.ProcessPath);
+                                rk.SetValue(PROGRAMNAME, Environment.ProcessPath!);
                             else
                                 rk.DeleteValue(PROGRAMNAME);
                         }
@@ -115,7 +114,6 @@ namespace ReplaceBackground.ViewModels
         ///<summary>Логика выполнения - загрузка окна</summary>
         private void OnLoadedWindowCommandExecuted(Window p)
         {
-            _currentWindow = p;
             _directory = Path.GetDirectoryName(Environment.ProcessPath)!;
             Setting? setting;
             if ((setting = ReadSettings()) is not null)
@@ -215,7 +213,7 @@ namespace ReplaceBackground.ViewModels
             switch (_selectedInterval)
             {
                 case "День":
-                    if (_settings.DateReplaced >= DATETODAY)
+                    if (_settings.DateReplaced <= DATETODAY)
                     {
                         Settings.DateReplaced = DATETODAY.AddDays(1);
                         Settings.Season = Setting.GetSeason(DATETODAY.Month);
