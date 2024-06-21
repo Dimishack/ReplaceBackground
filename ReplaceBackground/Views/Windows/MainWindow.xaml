@@ -41,7 +41,8 @@
                 <ComboBox ItemsSource="{Binding Intervals}" SelectedItem="{Binding SelectedInterval}"/>
             </StackPanel>
         </DockPanel>
-        <Button Margin="10" Padding="20,10">
+        <Button Margin="10" Padding="20,10"
+                Command="{Binding OpenFolderImagesCommand}">
             <TextBlock TextAlignment="Center">Открыть папку <LineBreak/> с изображениями</TextBlock>
         </Button>
     </DockPanel>

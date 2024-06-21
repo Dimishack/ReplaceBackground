@@ -3,6 +3,7 @@ using ReplaceBackground.Infrastructure;
 using ReplaceBackground.Infrastructure.Commands;
 using ReplaceBackground.Models;
 using ReplaceBackground.ViewModels.Base;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -15,6 +16,9 @@ namespace ReplaceBackground.ViewModels
 
     class MainWViewModel : ViewModel
     {
+        #region Fields...
+
+        const string PROGRAMNAME = "ReplaceBackground";
         private readonly DateTime DATETODAY = DateTime.Today;
         private Window? _currentWindow;
         private string _directory = Environment.CurrentDirectory;
@@ -23,6 +27,8 @@ namespace ReplaceBackground.ViewModels
             Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Cyrillic),
             WriteIndented = true,
         };
+
+        #endregion
 
         #region Properties...
 
@@ -44,18 +50,17 @@ namespace ReplaceBackground.ViewModels
                 {
                     try
                     {
-                        if (value ^ Array.IndexOf(rk.GetValueNames(), _currentWindow.Title) != -1)
+                        if (value ^ Array.IndexOf(rk.GetValueNames(), PROGRAMNAME) != -1)
                         {
                             if (value)
-                                rk.SetValue(_currentWindow.Title, Environment.ProcessPath);
+                                rk.SetValue(PROGRAMNAME, Environment.ProcessPath);
                             else
-                                rk.DeleteValue(_currentWindow.Title);
+                                rk.DeleteValue(PROGRAMNAME);
                         }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Не удалось добавить или удалить с автозапуска. Проверьте исходный код." +
-                            $"\nОшибка: {ex.Message}");
+                        ShowError(ex.Message);
                     }
                 }
             }
@@ -148,7 +153,44 @@ namespace ReplaceBackground.ViewModels
 
         #endregion
 
+        #region OpenFolderImagesCommand - Команда - открыть папку с изображениями
+
+        ///<summary>Команда - открыть папку с изображениями</summary>
+        private ICommand? _openFolderImagesCommand;
+
+        ///<summary>Команда - открыть папку с изображениями</summary>
+        public ICommand OpenFolderImagesCommand => _openFolderImagesCommand
+            ??= new LambdaCommand(OnOpenFolderImagesCommandExecuted, CanOpenFolderImagesCommandExecute);
+
+        ///<summary>Проверка возможности выполнения - открыть папку с изображениями</summary>
+        private bool CanOpenFolderImagesCommandExecute(object? p) => Directory.Exists(@$"{_directory}/Background");
+
+        ///<summary>Логика выполнения - открыть папку с изображениями</summary>
+        private void OnOpenFolderImagesCommandExecuted(object? p) =>
+            Process.Start("explorer.exe", $@"{_directory}\Background\");
+
         #endregion
+
+        #endregion
+
+        public MainWViewModel()
+        {
+            using (var rk = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false))
+            {
+                try
+                {
+                    _isAutorun = Array.IndexOf(rk.GetValueNames(), PROGRAMNAME) != -1;
+                }
+                catch (Exception ex)
+                {
+                    ShowError(ex.Message);
+                    _isAutorun = false;
+                    throw;
+                }
+            }
+        }
+
+        #region Methods...
 
         private Setting? ReadSettings()
         {
@@ -161,8 +203,9 @@ namespace ReplaceBackground.ViewModels
                 }
                 return settings;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                ShowError(ex.Message);
                 return null;
             }
         }
@@ -180,7 +223,7 @@ namespace ReplaceBackground.ViewModels
                     }
                     break;
                 case "Неделя":
-                    if(DATETODAY.DayOfWeek == DayOfWeek.Monday)
+                    if (DATETODAY.DayOfWeek == DayOfWeek.Monday)
                     {
                         Settings.DateReplaced = DATETODAY;
                         Settings.Season = Setting.GetSeason(DATETODAY.Month);
@@ -216,11 +259,16 @@ namespace ReplaceBackground.ViewModels
                 var images = Directory.GetFiles($@"{_directory}/Background/{_settings.Season}");
                 return images[Random.Shared.Next(images.Length)];
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                ShowError(ex.Message);
                 return null;
             }
         }
 
+        private static void ShowError(string message, string caption = "ReplaceBackground") =>
+            MessageBox.Show($"Error! Message:{message}", caption, MessageBoxButton.OK, MessageBoxImage.Error);
+
+        #endregion
     }
 }
