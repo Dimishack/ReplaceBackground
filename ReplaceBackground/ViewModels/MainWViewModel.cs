@@ -1,4 +1,5 @@
 ﻿using Microsoft.Win32;
+using ReplaceBackground.Infrastructure;
 using ReplaceBackground.Infrastructure.Commands;
 using ReplaceBackground.Models;
 using ReplaceBackground.ViewModels.Base;
@@ -11,8 +12,10 @@ using System.Windows.Input;
 
 namespace ReplaceBackground.ViewModels
 {
+
     class MainWViewModel : ViewModel
     {
+        private readonly DateTime DATETODAY = DateTime.Today;
         private Window? _currentWindow;
         private string _directory = Environment.CurrentDirectory;
         private readonly JsonSerializerOptions _JSO = new()
@@ -37,7 +40,7 @@ namespace ReplaceBackground.ViewModels
                 if (!Set(ref _isAutorun, value)) return;
 
                 using (var rk = Registry.CurrentUser.CreateSubKey(
-                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run"))
+                    @"Software\Microsoft\Windows\CurrentVersion\Run"))
                 {
                     try
                     {
@@ -112,7 +115,13 @@ namespace ReplaceBackground.ViewModels
             Setting? setting;
             if ((setting = ReadSettings()) is not null)
                 Settings = setting;
-            
+            SelectedInterval = Settings.Interval;
+            if (IsReplaceBackground())
+            {
+                var image = GetImage();
+                if (image is null) return;
+                User32.SetWallpaper(image, 10, 0);
+            }
             if (!Equals(Path.GetDirectoryName(Environment.ProcessPath), Environment.CurrentDirectory))
                 p.Close();
         }
@@ -157,5 +166,61 @@ namespace ReplaceBackground.ViewModels
                 return null;
             }
         }
+
+        private bool IsReplaceBackground()
+        {
+            switch (_selectedInterval)
+            {
+                case "День":
+                    if (_settings.DateReplaced >= DATETODAY)
+                    {
+                        Settings.DateReplaced = DATETODAY.AddDays(1);
+                        Settings.Season = Setting.GetSeason(DATETODAY.Month);
+                        return true;
+                    }
+                    break;
+                case "Неделя":
+                    if(DATETODAY.DayOfWeek == DayOfWeek.Monday)
+                    {
+                        Settings.DateReplaced = DATETODAY;
+                        Settings.Season = Setting.GetSeason(DATETODAY.Month);
+                        return true;
+                    }
+                    break;
+                case "Месяц":
+                    if (DATETODAY.Month != _settings.DateReplaced.Month)
+                    {
+                        Settings.DateReplaced = new DateTime(DATETODAY.Year, DATETODAY.Month + 1, 1);
+                        Settings.Season = Setting.GetSeason(_settings.DateReplaced.Month);
+                        return true;
+                    }
+                    break;
+                case "Сезон":
+                    if (string.Compare(_settings.Season, Setting.GetSeason(DATETODAY.Month)) != 0)
+                    {
+                        int plusNextSeason = 3 - (DATETODAY.Month % 3);
+                        Settings.DateReplaced = new DateTime(DATETODAY.Year, DATETODAY.Month + plusNextSeason, 1);
+                        Settings.Season = Setting.GetSeason(_settings.DateReplaced.Month);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return false;
+        }
+
+        private string? GetImage()
+        {
+            try
+            {
+                var images = Directory.GetFiles($@"{_directory}/Background/{_settings.Season}");
+                return images[Random.Shared.Next(images.Length)];
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
     }
 }
