@@ -44,8 +44,8 @@ namespace ReplaceBackground.ViewModels
             {
                 if (!Set(ref _isAutorun, value)) return;
 
-                using (var rk = Registry.CurrentUser.CreateSubKey(
-                    @"Software\Microsoft\Windows\CurrentVersion\Run"))
+                using (var rk = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Run", true))
                 {
                     try
                     {
@@ -221,7 +221,7 @@ namespace ReplaceBackground.ViewModels
                     }
                     break;
                 case "Неделя":
-                    if (DATETODAY.DayOfWeek == DayOfWeek.Monday)
+                    if (_settings.DateReplaced <= DATETODAY && DATETODAY.DayOfWeek == DayOfWeek.Monday)
                     {
                         Settings.DateReplaced = DATETODAY;
                         Settings.Season = Setting.GetSeason(DATETODAY.Month);
@@ -242,6 +242,7 @@ namespace ReplaceBackground.ViewModels
                         int plusNextSeason = 3 - (DATETODAY.Month % 3);
                         Settings.DateReplaced = new DateTime(DATETODAY.Year, DATETODAY.Month + plusNextSeason, 1);
                         Settings.Season = Setting.GetSeason(_settings.DateReplaced.Month);
+                        return true;
                     }
                     break;
                 default:
