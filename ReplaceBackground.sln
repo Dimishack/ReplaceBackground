@@ -5,6 +5,8 @@ VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReplaceBackground", "ReplaceBackground\ReplaceBackground.csproj", "{F8B69000-FDEC-4774-9CFA-F816DEF97B0D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RBAutorun", "RBAutorun\RBAutorun.csproj", "{3C2F5A2A-B697-443F-9792-3AD8EB1FA2E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{F8B69000-FDEC-4774-9CFA-F816DEF97B0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F8B69000-FDEC-4774-9CFA-F816DEF97B0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F8B69000-FDEC-4774-9CFA-F816DEF97B0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C2F5A2A-B697-443F-9792-3AD8EB1FA2E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C2F5A2A-B697-443F-9792-3AD8EB1FA2E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C2F5A2A-B697-443F-9792-3AD8EB1FA2E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C2F5A2A-B697-443F-9792-3AD8EB1FA2E4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

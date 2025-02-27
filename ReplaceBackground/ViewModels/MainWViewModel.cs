@@ -1,13 +1,10 @@
-﻿using Microsoft.Win32;
-using ReplaceBackground.Infrastructure;
+﻿using MessagePack;
+using Microsoft.Win32;
 using ReplaceBackground.Infrastructure.Commands;
 using ReplaceBackground.Models;
 using ReplaceBackground.ViewModels.Base;
 using System.Diagnostics;
 using System.IO;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Unicode;
 using System.Windows;
 using System.Windows.Input;
 
@@ -17,15 +14,8 @@ namespace ReplaceBackground.ViewModels
     class MainWViewModel : ViewModel
     {
         #region Fields...
-
+        const string SETTINGSFILENAME = "settings.bin";
         const string PROGRAMNAME = "ReplaceBackground";
-        private readonly DateTime DATETODAY = DateTime.Today;
-        private string _directory = Environment.CurrentDirectory;
-        private readonly JsonSerializerOptions _JSO = new()
-        {
-            Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Cyrillic),
-            WriteIndented = true,
-        };
 
         #endregion
 
@@ -49,10 +39,10 @@ namespace ReplaceBackground.ViewModels
                 {
                     try
                     {
-                        if (value ^ Array.IndexOf(rk.GetValueNames(), PROGRAMNAME) != -1)
+                        if (value ^ rk.GetValue(PROGRAMNAME) is not null)
                         {
                             if (value)
-                                rk.SetValue(PROGRAMNAME, Environment.ProcessPath!);
+                                rk.SetValue(PROGRAMNAME, $"{Environment.CurrentDirectory}\\RBAutorun.exe");
                             else
                                 rk.DeleteValue(PROGRAMNAME);
                         }
@@ -112,21 +102,12 @@ namespace ReplaceBackground.ViewModels
             ??= new LambdaCommand<Window>(OnLoadedWindowCommandExecuted);
 
         ///<summary>Логика выполнения - загрузка окна</summary>
-        private void OnLoadedWindowCommandExecuted(Window p)
+        private async void OnLoadedWindowCommandExecuted(Window p)
         {
-            _directory = Path.GetDirectoryName(Environment.ProcessPath)!;
             Setting? setting;
-            if ((setting = ReadSettings()) is not null)
+            if ((setting = await ReadSettings()) is not null)
                 Settings = setting;
             SelectedInterval = Settings.Interval;
-            if (IsReplaceBackground())
-            {
-                var image = GetImage();
-                if (image is null) return;
-                User32.SetWallpaper(image, 10, 0);
-            }
-            if (!Equals(Path.GetDirectoryName(Environment.ProcessPath), Environment.CurrentDirectory))
-                p.Close();
         }
 
         #endregion
@@ -141,12 +122,12 @@ namespace ReplaceBackground.ViewModels
             ??= new LambdaCommand(OnClosedWindowCommandExecuted);
 
         ///<summary>Логика выполнения - закрытие окна</summary>
-        private void OnClosedWindowCommandExecuted(object? p)
+        private async void OnClosedWindowCommandExecuted(object? p)
         {
-            using (var fs = new FileStream(@$"{_directory}/settings.json", FileMode.Create))
-            {
-                JsonSerializer.Serialize(fs, _settings, _JSO);
-            }
+            //using (var fs = new FileStream(SETTINGSFILENAME, FileMode.Create))
+            //{
+            //    await MessagePackSerializer.SerializeAsync(fs, Settings).ConfigureAwait(false);
+            //}
         }
 
         #endregion
@@ -161,11 +142,11 @@ namespace ReplaceBackground.ViewModels
             ??= new LambdaCommand(OnOpenFolderImagesCommandExecuted, CanOpenFolderImagesCommandExecute);
 
         ///<summary>Проверка возможности выполнения - открыть папку с изображениями</summary>
-        private bool CanOpenFolderImagesCommandExecute(object? p) => Directory.Exists(@$"{_directory}/Background");
+        private bool CanOpenFolderImagesCommandExecute(object? p) => Directory.Exists("Background");
 
         ///<summary>Логика выполнения - открыть папку с изображениями</summary>
         private void OnOpenFolderImagesCommandExecuted(object? p) =>
-            Process.Start("explorer.exe", $@"{_directory}\Background\");
+            Process.Start("explorer.exe", $@"{Environment.CurrentDirectory}\Background\");
 
         #endregion
 
@@ -175,88 +156,20 @@ namespace ReplaceBackground.ViewModels
         {
             using (var rk = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false))
             {
-                try
-                {
-                    _isAutorun = Array.IndexOf(rk.GetValueNames(), PROGRAMNAME) != -1;
-                }
-                catch (Exception ex)
-                {
-                    ShowError(ex.Message);
-                    _isAutorun = false;
-                    throw;
-                }
+                _isAutorun = rk is not null && rk.GetValue(PROGRAMNAME) is not null;
             }
         }
 
         #region Methods...
 
-        private Setting? ReadSettings()
+        private async Task<Setting?> ReadSettings()
         {
             try
             {
                 var settings = new Setting();
-                using (var fs = new FileStream($@"{_directory}/settings.json", FileMode.Open))
-                {
-                    settings = JsonSerializer.Deserialize<Setting>(fs, _JSO);
-                }
+                using (var fs = new FileStream(SETTINGSFILENAME, FileMode.Open))
+                    settings = await MessagePackSerializer.DeserializeAsync<Setting>(fs);
                 return settings;
-            }
-            catch (Exception ex)
-            {
-                ShowError(ex.Message);
-                return null;
-            }
-        }
-
-        private bool IsReplaceBackground()
-        {
-            switch (_selectedInterval)
-            {
-                case "День":
-                    if (_settings.DateReplaced <= DATETODAY)
-                    {
-                        Settings.DateReplaced = DATETODAY.AddDays(1);
-                        Settings.Season = Setting.GetSeason(DATETODAY.Month);
-                        return true;
-                    }
-                    break;
-                case "Неделя":
-                    if (_settings.DateReplaced <= DATETODAY && DATETODAY.DayOfWeek == DayOfWeek.Monday)
-                    {
-                        Settings.DateReplaced = DATETODAY;
-                        Settings.Season = Setting.GetSeason(DATETODAY.Month);
-                        return true;
-                    }
-                    break;
-                case "Месяц":
-                    if (DATETODAY.Month != _settings.DateReplaced.Month)
-                    {
-                        Settings.DateReplaced = new DateTime(DATETODAY.Year, DATETODAY.Month + 1, 1);
-                        Settings.Season = Setting.GetSeason(_settings.DateReplaced.Month);
-                        return true;
-                    }
-                    break;
-                case "Сезон":
-                    if (string.Compare(_settings.Season, Setting.GetSeason(DATETODAY.Month)) != 0)
-                    {
-                        int plusNextSeason = 3 - (DATETODAY.Month % 3);
-                        Settings.DateReplaced = new DateTime(DATETODAY.Year, DATETODAY.Month + plusNextSeason, 1);
-                        Settings.Season = Setting.GetSeason(_settings.DateReplaced.Month);
-                        return true;
-                    }
-                    break;
-                default:
-                    break;
-            }
-            return false;
-        }
-
-        private string? GetImage()
-        {
-            try
-            {
-                var images = Directory.GetFiles($@"{_directory}/Background/{_settings.Season}");
-                return images[Random.Shared.Next(images.Length)];
             }
             catch (Exception ex)
             {
